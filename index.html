@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Audio Cleaner - Suppresseur d'Empreinte IA</title>
+
+    <!-- PWA / iPhone -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121214">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Audio Cleaner">
+    <link rel="apple-touch-icon" href="icon.png">
+
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121214; color: #e1e1e6; max-width: 600px; margin: 40px auto; padding: 20px; text-align: center; }
+        .card { background: #202024; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 1px solid #323238; }
+        input[type="file"] { margin: 20px 0; color: #8d8d99; }
+        button { background: #04d361; color: #fff; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #00b351; }
+        button:disabled { background: #4d4d56; cursor: not-allowed; }
+        #status { margin-top: 20px; color: #a8a8b3; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Nettoyeur de Signal Audio (Anti-Watermark)</h2>
+    <p>Ce mini-outil applique un filtre passe-bas à 18kHz et un décalage de vitesse de +0.6% pour briser les marquages IA de Suno.</p>
+
+    <input type="file" id="audioFile" accept="audio/*"><br>
+    <button id="processBtn" disabled>Traiter et Télécharger</button>
+    <div id="status">Sélectionnez un fichier audio...</div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('audioFile');
+    const processBtn = document.getElementById('processBtn');
+    const statusDiv = document.getElementById('status');
+
+    let audioBuffer = null;
+
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        statusDiv.innerText = "Chargement du fichier...";
+        processBtn.disabled = true;
+
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            statusDiv.innerText = "Fichier audio prêt au traitement !";
+            processBtn.disabled = false;
+        } catch (error) {
+            statusDiv.innerText = "Erreur lors de la lecture du fichier.";
+            console.error(error);
+        }
+    });
+
+    processBtn.addEventListener('click', async () => {
+        if (!audioBuffer) return;
+        statusDiv.innerText = "Traitement en cours (Filtrage + Pitch)...";
+        processBtn.disabled = true;
+
+        const playbackRate = 1.006;
+        const targetSampleRate = audioBuffer.sampleRate;
+        const totalSamples = Math.floor(audioBuffer.length / playbackRate);
+
+        const offlineCtx = new OfflineAudioContext(
+            audioBuffer.numberOfChannels,
+            totalSamples,
+            targetSampleRate
+        );
+
+        const source = offlineCtx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.playbackRate.value = playbackRate;
+
+        const filter = offlineCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 18000;
+
+        source.connect(filter);
+        filter.connect(offlineCtx.destination);
+        source.start(0);
+
+        const renderedBuffer = await offlineCtx.startRendering();
+        statusDiv.innerText = "Génération du fichier WAV...";
+
+        const wavBlob = bufferToWav(renderedBuffer);
+
+        const url = URL.createObjectURL(wavBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "audio_nettoye.wav";
+        a.click();
+
+        statusDiv.innerText = "Terminé ! Le fichier a été téléchargé.";
+        processBtn.disabled = false;
+    });
+
+    function bufferToWav(buffer) {
+        let numOfChan = buffer.numberOfChannels,
+            length = buffer.length * numOfChan * 2 + 44,
+            bufferArr = new ArrayBuffer(length),
+            view = new DataView(bufferArr),
+            channels = [], i, sample,
+            offset = 0,
+            pos = 0;
+
+        function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
+        function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
+
+        setUint32(0x46464952);
+        setUint32(length - 8);
+        setUint32(0x45564157);
+        setUint32(0x20746d66);
+        setUint32(16);
+        setUint16(1);
+        setUint16(numOfChan);
+        setUint32(buffer.sampleRate);
+        setUint32(buffer.sampleRate * 2 * numOfChan);
+        setUint16(numOfChan * 2);
+        setUint16(16);
+        setUint32(0x61746164);
+        setUint32(length - pos - 4);
+
+        for (i = 0; i < buffer.numberOfChannels; i++) channels.push(buffer.getChannelData(i));
+
+        while (pos < length) {
+            for (i = 0; i < numOfChan; i++) {
+                sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+                view.setInt16(pos, sample, true);
+                pos += 2;
+            }
+            offset++;
+        }
+        return new Blob([bufferArr], { type: "audio/wav" });
+    }
+</script>
+
+<!-- Enregistrement du service worker pour le mode hors ligne -->
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(reg => console.log('Service Worker enregistré :', reg.scope))
+                .catch(err => console.error('Erreur Service Worker :', err));
+        });
+    }
+</script>
+
+</body>
+</html>
