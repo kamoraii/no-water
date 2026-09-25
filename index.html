@@ -13,6 +13,9 @@
     <meta name="apple-mobile-web-app-title" content="Audio Cleaner">
     <link rel="apple-touch-icon" href="icon.JPEG">
 
+    <!-- LameJS pour encodage MP3 -->
+    <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+
     <style>
         :root {
             --bg-deep: #1a1a2e;
@@ -42,7 +45,7 @@
             background: linear-gradient(160deg, #1a1a2e 0%, #2a1f45 50%, #1f2a3e 100%);
             background-attachment: fixed;
             color: var(--texte);
-            padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom) 20px;
+            padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom) 16px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -53,7 +56,7 @@
             width: 100%;
             max-width: 520px;
             margin: auto;
-            padding: 20px 0;
+            padding: 12px 0;
         }
 
         h1 {
@@ -70,7 +73,7 @@
             text-align: center;
             color: var(--texte-doux);
             font-size: 0.85rem;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             line-height: 1.4;
         }
 
@@ -134,6 +137,21 @@
             box-shadow: 0 6px 18px rgba(206, 147, 216, 0.5);
         }
 
+        .btn-reset {
+            background: transparent;
+            color: var(--rose);
+            border: 2px solid rgba(248, 187, 208, 0.5);
+            margin-top: 8px;
+            margin-bottom: 0;
+            font-size: 0.9rem;
+            padding: 10px 20px;
+        }
+
+        .btn-reset:hover {
+            background: rgba(248, 187, 208, 0.1);
+            border-color: var(--rose);
+        }
+
         .btn:disabled {
             background: #3a3a5a;
             color: #6b6b8a;
@@ -161,6 +179,30 @@
             color: var(--turquoise);
         }
 
+        .format-selector {
+            margin-top: 16px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .format-selector label {
+            font-size: 0.85rem;
+            color: var(--texte-doux);
+        }
+
+        .format-selector select {
+            background: rgba(26, 26, 46, 0.8);
+            color: var(--texte);
+            border: 1.5px solid rgba(179, 157, 219, 0.5);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
         #status {
             margin-top: 20px;
             padding: 12px;
@@ -181,7 +223,7 @@
         }
 
         .note {
-            margin-top: 20px;
+            margin-top: 16px;
             font-size: 0.75rem;
             color: var(--texte-doux);
             text-align: center;
@@ -196,21 +238,31 @@
     <p class="subtitle">Nettoyeur de signal audio<br>Filtre passe-bas 18 kHz + décalage +0.6%</p>
 
     <div class="card">
-        <button class="btn btn-audio" id="pickAudioBtn">🎵 Choisir un fichier audio</button>
-        <button class="btn btn-photo" id="pickVideoBtn">🎬 Choisir depuis la photothèque</button>
+        <button class="btn btn-audio" id="pickAudioBtn">📁 Fichiers</button>
+        <button class="btn btn-photo" id="pickVideoBtn">🖼️ Photothèque</button>
 
         <div class="file-info" id="fileInfo">Aucun fichier sélectionné</div>
 
-        <button class="btn btn-process" id="processBtn" disabled>✨ Traiter et télécharger</button>
+        <button class="btn btn-reset hidden" id="resetBtn">✖ Retirer le fichier</button>
+
+        <div class="format-selector">
+            <label for="formatSelect">Format de sortie :</label>
+            <select id="formatSelect">
+                <option value="wav">WAV</option>
+                <option value="mp3">MP3</option>
+            </select>
+        </div>
+
+        <button class="btn btn-process" id="processBtn" disabled>✨ Traiter et enregistrer</button>
 
         <div id="status">Sélectionnez un fichier audio ou vidéo…</div>
     </div>
 
-    <p class="note">Le fichier traité sera téléchargé au format WAV.</p>
+    <p class="note">Sur iPhone, la feuille de partage vous permettra d’enregistrer dans le dossier de votre choix.</p>
 
     <!-- Inputs cachés -->
     <input type="file" id="audioInput" accept="audio/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.opus,.wma,.aiff,.aif" class="hidden">
-    <input type="file" id="videoInput" accept="video/*,.mp4,.mov,.m4v,.avi,.mkv,.webm" class="hidden">
+    <input type="file" id="videoInput" accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.mp4,.mov,.m4v,.webm" class="hidden">
 </div>
 
 <script>
@@ -219,16 +271,18 @@
     const pickAudioBtn = document.getElementById('pickAudioBtn');
     const pickVideoBtn = document.getElementById('pickVideoBtn');
     const processBtn = document.getElementById('processBtn');
+    const resetBtn = document.getElementById('resetBtn');
     const statusDiv = document.getElementById('status');
     const fileInfo = document.getElementById('fileInfo');
+    const formatSelect = document.getElementById('formatSelect');
 
     let audioBuffer = null;
     let currentFileName = '';
 
-    // Ouvre le sélecteur de fichiers audio
+    // Ouvre le sélecteur de fichiers (uniquement app Fichiers sur iOS)
     pickAudioBtn.addEventListener('click', () => audioInput.click());
 
-    // Ouvre le sélecteur de la photothèque (audio + vidéo)
+    // Ouvre le sélecteur de la photothèque (photos/vidéos uniquement)
     pickVideoBtn.addEventListener('click', () => videoInput.click());
 
     // Gestion commune de la sélection d'un fichier
@@ -240,6 +294,7 @@
         fileInfo.classList.add('active');
         statusDiv.textContent = "Chargement du fichier…";
         processBtn.disabled = true;
+        resetBtn.classList.remove('hidden');
         audioBuffer = null;
 
         try {
@@ -257,9 +312,24 @@
     audioInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
     videoInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
 
+    // Reset : retire le fichier sélectionné
+    resetBtn.addEventListener('click', () => {
+        audioBuffer = null;
+        currentFileName = '';
+        fileInfo.textContent = "Aucun fichier sélectionné";
+        fileInfo.classList.remove('active');
+        statusDiv.textContent = "Sélectionnez un fichier audio ou vidéo…";
+        processBtn.disabled = true;
+        resetBtn.classList.add('hidden');
+        audioInput.value = '';
+        videoInput.value = '';
+    });
+
     // Traitement audio
     processBtn.addEventListener('click', async () => {
         if (!audioBuffer) return;
+
+        const format = formatSelect.value;
         statusDiv.textContent = "⏳ Traitement en cours (filtrage + pitch)…";
         processBtn.disabled = true;
 
@@ -287,18 +357,46 @@
             source.start(0);
 
             const renderedBuffer = await offlineCtx.startRendering();
-            statusDiv.textContent = "💾 Génération du fichier WAV…";
 
-            const wavBlob = bufferToWav(renderedBuffer);
+            let blob, extension;
+            if (format === 'mp3') {
+                statusDiv.textContent = "💾 Génération du fichier MP3…";
+                blob = encodeMP3(renderedBuffer);
+                extension = 'mp3';
+            } else {
+                statusDiv.textContent = "💾 Génération du fichier WAV…";
+                blob = bufferToWav(renderedBuffer);
+                extension = 'wav';
+            }
 
-            const url = URL.createObjectURL(wavBlob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = currentFileName.replace(/\.[^.]+$/, '') + '_nettoye.wav';
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            const baseName = currentFileName.replace(/\.[^.]+$/, '');
+            const fileName = `${baseName}_nettoye.${extension}`;
+            const file = new File([blob], fileName, { type: blob.type });
 
-            statusDiv.textContent = "✅ Terminé ! Le fichier a été téléchargé.";
+            // Tentative via la feuille de partage iOS (permet de choisir le dossier)
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: fileName,
+                        text: "Fichier audio nettoyé"
+                    });
+                    statusDiv.textContent = "✅ Fichier partagé / enregistré.";
+                } catch (shareErr) {
+                    // L'utilisateur a annulé le partage ou erreur → on retombe sur le téléchargement
+                    if (shareErr.name !== 'AbortError') {
+                        console.warn('Erreur partage, téléchargement classique', shareErr);
+                        triggerDownload(blob, fileName);
+                        statusDiv.textContent = "✅ Fichier téléchargé.";
+                    } else {
+                        statusDiv.textContent = "ℹ️ Partage annulé.";
+                    }
+                }
+            } else {
+                // Navigateur sans partage natif → téléchargement direct
+                triggerDownload(blob, fileName);
+                statusDiv.textContent = "✅ Fichier téléchargé.";
+            }
         } catch (error) {
             statusDiv.textContent = "❌ Erreur lors du traitement.";
             console.error(error);
@@ -306,6 +404,16 @@
 
         processBtn.disabled = false;
     });
+
+    // Déclenche un téléchargement classique
+    function triggerDownload(blob, fileName) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
 
     // Encodage WAV
     function bufferToWav(buffer) {
@@ -346,6 +454,48 @@
             offset++;
         }
         return new Blob([bufferArr], { type: "audio/wav" });
+    }
+
+    // Encodage MP3 via lamejs
+    function encodeMP3(buffer) {
+        const numChannels = buffer.numberOfChannels;
+        const sampleRate = buffer.sampleRate;
+        const kbps = 192;
+        const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, kbps);
+
+        // Conversion Float32 -> Int16
+        const left = buffer.getChannelData(0);
+        const right = numChannels > 1 ? buffer.getChannelData(1) : null;
+        const sampleBlockSize = 1152;
+        const mp3Data = [];
+
+        const leftInt = floatTo16BitPCM(left);
+        const rightInt = right ? floatTo16BitPCM(right) : null;
+
+        for (let i = 0; i < leftInt.length; i += sampleBlockSize) {
+            const leftChunk = leftInt.subarray(i, i + sampleBlockSize);
+            const rightChunk = rightInt ? rightInt.subarray(i, i + sampleBlockSize) : null;
+            let mp3buf;
+            if (numChannels > 1) {
+                mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+            } else {
+                mp3buf = mp3encoder.encodeBuffer(leftChunk);
+            }
+            if (mp3buf.length > 0) mp3Data.push(new Int8Array(mp3buf));
+        }
+        const end = mp3encoder.flush();
+        if (end.length > 0) mp3Data.push(new Int8Array(end));
+
+        return new Blob(mp3Data, { type: 'audio/mp3' });
+    }
+
+    function floatTo16BitPCM(input) {
+        const output = new Int16Array(input.length);
+        for (let i = 0; i < input.length; i++) {
+            let s = Math.max(-1, Math.min(1, input[i]));
+            output[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        return output;
     }
 </script>
 
