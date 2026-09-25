@@ -3,14 +3,14 @@
   "short_name": "Audio Cleaner",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#121214",
-  "theme_color": "#121214",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
   "description": "Nettoyeur de signal audio anti-watermark",
   "icons": [
     {
-      "src": "icon.png",
+      "src": "icon.JPEG",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     }
   ]
