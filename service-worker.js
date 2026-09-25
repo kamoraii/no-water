@@ -1,9 +1,10 @@
-const CACHE_NAME = 'audio-cleaner-v1';
+const CACHE_NAME = 'audio-cleaner-v2';
 const urlsToCache = [
   './',
   './index.html',
   './manifest.json',
-  './icon.JPEG'
+  './icon.JPEG',
+  'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js'
 ];
 
 self.addEventListener('install', event => {
