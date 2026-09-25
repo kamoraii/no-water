@@ -7,101 +7,307 @@
 
     <!-- PWA / iPhone -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#121214">
+    <meta name="theme-color" content="#1a1a2e">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Audio Cleaner">
     <link rel="apple-touch-icon" href="icon.JPEG">
 
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121214; color: #e1e1e6; max-width: 600px; margin: 40px auto; padding: 20px; text-align: center; }
-        .card { background: #202024; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 1px solid #323238; }
-        input[type="file"] { margin: 20px 0; color: #8d8d99; }
-        button { background: #04d361; color: #fff; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
-        button:hover { background: #00b351; }
-        button:disabled { background: #4d4d56; cursor: not-allowed; }
-        #status { margin-top: 20px; color: #a8a8b3; font-style: italic; }
+        :root {
+            --bg-deep: #1a1a2e;
+            --bg-card: #26264a;
+            --mauve: #b39ddb;
+            --rose: #f8bbd0;
+            --bleu-ciel: #90caf9;
+            --turquoise: #80deea;
+            --texte: #f0eefb;
+            --texte-doux: #b8b4d4;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            min-height: 100vh;
+            min-height: 100dvh;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(160deg, #1a1a2e 0%, #2a1f45 50%, #1f2a3e 100%);
+            background-attachment: fixed;
+            color: var(--texte);
+            padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom) 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100dvh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 520px;
+            margin: auto;
+            padding: 20px 0;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            text-align: center;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, var(--mauve), var(--rose), var(--bleu-ciel), var(--turquoise));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--texte-doux);
+            font-size: 0.85rem;
+            margin-bottom: 24px;
+            line-height: 1.4;
+        }
+
+        .card {
+            background: rgba(38, 38, 74, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1.5px solid rgba(179, 157, 219, 0.35);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 12px;
+            color: #1a1a2e;
+            letter-spacing: 0.3px;
+        }
+
+        .btn-audio {
+            background: linear-gradient(135deg, var(--mauve), var(--rose));
+            border-color: var(--rose);
+            box-shadow: 0 4px 12px rgba(248, 187, 208, 0.25);
+        }
+
+        .btn-audio:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(248, 187, 208, 0.4);
+        }
+
+        .btn-photo {
+            background: linear-gradient(135deg, var(--bleu-ciel), var(--turquoise));
+            border-color: var(--turquoise);
+            box-shadow: 0 4px 12px rgba(128, 222, 234, 0.25);
+        }
+
+        .btn-photo:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(128, 222, 234, 0.4);
+        }
+
+        .btn-process {
+            background: linear-gradient(135deg, #ce93d8, #9fa8da);
+            border-color: #ce93d8;
+            color: #1a1a2e;
+            margin-top: 16px;
+            margin-bottom: 0;
+            box-shadow: 0 4px 12px rgba(206, 147, 216, 0.3);
+        }
+
+        .btn-process:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(206, 147, 216, 0.5);
+        }
+
+        .btn:disabled {
+            background: #3a3a5a;
+            color: #6b6b8a;
+            border-color: #4a4a6a;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .file-info {
+            background: rgba(26, 26, 46, 0.6);
+            border: 1.5px dashed rgba(179, 157, 219, 0.4);
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 16px;
+            font-size: 0.8rem;
+            color: var(--texte-doux);
+            text-align: center;
+            word-break: break-all;
+        }
+
+        .file-info.active {
+            border-style: solid;
+            border-color: var(--turquoise);
+            color: var(--turquoise);
+        }
+
+        #status {
+            margin-top: 20px;
+            padding: 12px;
+            background: rgba(26, 26, 46, 0.6);
+            border-radius: 10px;
+            color: var(--texte-doux);
+            font-size: 0.85rem;
+            text-align: center;
+            border: 1.5px solid rgba(144, 202, 249, 0.2);
+            min-height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .note {
+            margin-top: 20px;
+            font-size: 0.75rem;
+            color: var(--texte-doux);
+            text-align: center;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>Nettoyeur de Signal Audio (Anti-Watermark)</h2>
-    <p>Ce mini-outil applique un filtre passe-bas à 18kHz et un décalage de vitesse de +0.6% pour briser les marquages IA de Suno.</p>
+<div class="container">
+    <h1>Audio Cleaner</h1>
+    <p class="subtitle">Nettoyeur de signal audio<br>Filtre passe-bas 18 kHz + décalage +0.6%</p>
 
-    <input type="file" id="audioFile" accept="audio/*"><br>
-    <button id="processBtn" disabled>Traiter et Télécharger</button>
-    <div id="status">Sélectionnez un fichier audio...</div>
+    <div class="card">
+        <button class="btn btn-audio" id="pickAudioBtn">🎵 Choisir un fichier audio</button>
+        <button class="btn btn-photo" id="pickVideoBtn">🎬 Choisir depuis la photothèque</button>
+
+        <div class="file-info" id="fileInfo">Aucun fichier sélectionné</div>
+
+        <button class="btn btn-process" id="processBtn" disabled>✨ Traiter et télécharger</button>
+
+        <div id="status">Sélectionnez un fichier audio ou vidéo…</div>
+    </div>
+
+    <p class="note">Le fichier traité sera téléchargé au format WAV.</p>
+
+    <!-- Inputs cachés -->
+    <input type="file" id="audioInput" accept="audio/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.opus,.wma,.aiff,.aif" class="hidden">
+    <input type="file" id="videoInput" accept="video/*,.mp4,.mov,.m4v,.avi,.mkv,.webm" class="hidden">
 </div>
 
 <script>
-    const fileInput = document.getElementById('audioFile');
+    const audioInput = document.getElementById('audioInput');
+    const videoInput = document.getElementById('videoInput');
+    const pickAudioBtn = document.getElementById('pickAudioBtn');
+    const pickVideoBtn = document.getElementById('pickVideoBtn');
     const processBtn = document.getElementById('processBtn');
     const statusDiv = document.getElementById('status');
+    const fileInfo = document.getElementById('fileInfo');
 
     let audioBuffer = null;
+    let currentFileName = '';
 
-    fileInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
+    // Ouvre le sélecteur de fichiers audio
+    pickAudioBtn.addEventListener('click', () => audioInput.click());
+
+    // Ouvre le sélecteur de la photothèque (audio + vidéo)
+    pickVideoBtn.addEventListener('click', () => videoInput.click());
+
+    // Gestion commune de la sélection d'un fichier
+    async function handleFile(file) {
         if (!file) return;
 
-        statusDiv.innerText = "Chargement du fichier...";
+        currentFileName = file.name;
+        fileInfo.textContent = `📎 ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} Mo)`;
+        fileInfo.classList.add('active');
+        statusDiv.textContent = "Chargement du fichier…";
         processBtn.disabled = true;
+        audioBuffer = null;
 
         try {
             const arrayBuffer = await file.arrayBuffer();
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-            statusDiv.innerText = "Fichier audio prêt au traitement !";
+            statusDiv.textContent = "✅ Fichier prêt au traitement !";
             processBtn.disabled = false;
         } catch (error) {
-            statusDiv.innerText = "Erreur lors de la lecture du fichier.";
+            statusDiv.textContent = "❌ Impossible de lire ce fichier. Format non supporté.";
             console.error(error);
         }
-    });
+    }
 
+    audioInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+    videoInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+    // Traitement audio
     processBtn.addEventListener('click', async () => {
         if (!audioBuffer) return;
-        statusDiv.innerText = "Traitement en cours (Filtrage + Pitch)...";
+        statusDiv.textContent = "⏳ Traitement en cours (filtrage + pitch)…";
         processBtn.disabled = true;
 
-        const playbackRate = 1.006;
-        const targetSampleRate = audioBuffer.sampleRate;
-        const totalSamples = Math.floor(audioBuffer.length / playbackRate);
+        try {
+            const playbackRate = 1.006;
+            const targetSampleRate = audioBuffer.sampleRate;
+            const totalSamples = Math.floor(audioBuffer.length / playbackRate);
 
-        const offlineCtx = new OfflineAudioContext(
-            audioBuffer.numberOfChannels,
-            totalSamples,
-            targetSampleRate
-        );
+            const offlineCtx = new OfflineAudioContext(
+                audioBuffer.numberOfChannels,
+                totalSamples,
+                targetSampleRate
+            );
 
-        const source = offlineCtx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.playbackRate.value = playbackRate;
+            const source = offlineCtx.createBufferSource();
+            source.buffer = audioBuffer;
+            source.playbackRate.value = playbackRate;
 
-        const filter = offlineCtx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 18000;
+            const filter = offlineCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 18000;
 
-        source.connect(filter);
-        filter.connect(offlineCtx.destination);
-        source.start(0);
+            source.connect(filter);
+            filter.connect(offlineCtx.destination);
+            source.start(0);
 
-        const renderedBuffer = await offlineCtx.startRendering();
-        statusDiv.innerText = "Génération du fichier WAV...";
+            const renderedBuffer = await offlineCtx.startRendering();
+            statusDiv.textContent = "💾 Génération du fichier WAV…";
 
-        const wavBlob = bufferToWav(renderedBuffer);
+            const wavBlob = bufferToWav(renderedBuffer);
 
-        const url = URL.createObjectURL(wavBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = "audio_nettoye.wav";
-        a.click();
+            const url = URL.createObjectURL(wavBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = currentFileName.replace(/\.[^.]+$/, '') + '_nettoye.wav';
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-        statusDiv.innerText = "Terminé ! Le fichier a été téléchargé.";
+            statusDiv.textContent = "✅ Terminé ! Le fichier a été téléchargé.";
+        } catch (error) {
+            statusDiv.textContent = "❌ Erreur lors du traitement.";
+            console.error(error);
+        }
+
         processBtn.disabled = false;
     });
 
+    // Encodage WAV
     function bufferToWav(buffer) {
         let numOfChan = buffer.numberOfChannels,
             length = buffer.length * numOfChan * 2 + 44,
@@ -143,7 +349,7 @@
     }
 </script>
 
-<!-- Enregistrement du service worker pour le mode hors ligne -->
+<!-- Enregistrement du service worker -->
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
